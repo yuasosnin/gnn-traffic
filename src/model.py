@@ -4,28 +4,38 @@ import torch.nn.functional as F
 import pytorch_lightning as pl
 
 from torch_geometric_temporal.nn.recurrent import A3TGCN
+from torch_geometric_temporal.nn.attention import ASTGCN
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ExponentialLR
 
 
+def get_model(model_name, model_kwargs):
+    if model_name == 'A3TGCN':
+        return nn.Sequential(
+            A3TGCN(in_channels=2, out_channels=model_kwargs['out_channels'], periods=12),
+            nn.Linear(model_kwargs['out_channels'], 12))
+    elif model_name == 'ASTGCN':
+        return ASTGCN(
+            nb_block=model_kwargs['nb_block'], 
+            in_channels=2, 
+            K=3, 
+            nb_chev_filter=model_kwargs['nb_chev_filter'], 
+            nb_time_filter=model_kwargs['nb_time_filter'], 
+            time_strides=1, 
+            num_for_predict=12, 
+            len_input=12, 
+            num_of_vertices=207)
+
+
 class TemporalGNN(pl.LightningModule):
-    def __init__(self, in_features, hidden_features=32, periods=12, lr=1e-3, weight_decay=1e-4, gamma=1):
+    def __init__(self, model_name='A3TGCN', lr=1e-3, weight_decay=1e-4, gamma=1, **model_kwargs):
         super().__init__()
         self.save_hyperparameters()
-
-        self.tgnn = A3TGCN(
-            in_channels=in_features, 
-            out_channels=hidden_features, 
-            periods=periods)
-        self.linear = nn.Linear(hidden_features, periods)
-        self.act = nn.ReLU()
+        self.model = get_model(model_name, model_kwargs)
         self.criterion = nn.MSELoss()
 
     def forward(self, x, edge_index):
-        h = self.tgnn(x, edge_index)
-        h = self.act(h)
-        h = self.linear(h)
-        return h
+        return self.model(x, edge_index)
 
     def training_step(self, batch, batch_idx):
         output = self.forward(batch['x'], batch['edge_index'])
