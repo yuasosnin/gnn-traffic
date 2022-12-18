@@ -13,9 +13,10 @@ class TemporalGNN(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        self.tgnn = A3TGCN(in_channels=in_features, 
-                           out_channels=hidden_features, 
-                           periods=periods)
+        self.tgnn = A3TGCN(
+            in_channels=in_features, 
+            out_channels=hidden_features, 
+            periods=periods)
         self.linear = nn.Linear(hidden_features, periods)
         self.act = nn.ReLU()
         self.criterion = nn.MSELoss()
@@ -32,8 +33,17 @@ class TemporalGNN(pl.LightningModule):
         self.log('train_loss', loss.item(), on_step=True, on_epoch=True)
         return loss
 
-    validation_step = training_step
-    test_step = training_step
+    def validation_step(self, batch, batch_idx):
+        output = self.forward(batch['x'], batch['edge_index'])
+        loss = self.criterion(output, batch['y'])
+        self.log('val_loss', loss.item(), on_step=True, on_epoch=True)
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        output = self.forward(batch['x'], batch['edge_index'])
+        loss = self.criterion(output, batch['y'])
+        self.log('test_loss', loss.item(), on_step=True, on_epoch=True)
+        return loss
 
     def predict_step(self, batch, batch_idx):
         output = self.forward(batch['x'], batch['edge_index'])
