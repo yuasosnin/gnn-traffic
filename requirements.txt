@@ -1,0 +1,8 @@
+tqdm
+numpy
+pandas
+matplotlib
+contextily
+networkx
+torch==1.13.*
+pytorch_lightning
