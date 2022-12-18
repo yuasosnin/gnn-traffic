@@ -1,8 +1,7 @@
-from os import PathLike
 import pandas as pd
 
 
-def read_logs(path: PathLike) -> dict[str: pd.Series]:
+def read_logs(path):
     """
     Read metrics.csv produced by pytorch_lightning.loggers.CSVLogger into a dictionary.
     """
